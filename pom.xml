@@ -5,7 +5,7 @@
   <groupId>net.sf.jtidy</groupId>
   <artifactId>jtidy</artifactId>
   <name>JTidy</name>
-  <version>9.0-trajano-SNAPSHOT</version>
+  <version>9.0-ep</version>
   <description>
     JTidy is a Java port of HTML Tidy, a HTML syntax checker and pretty printer. Like its non-Java cousin, JTidy can be used as a tool for cleaning up malformed and faulty HTML. In addition, JTidy provides a DOM interface to the document that is being processed, which effectively makes you able to use JTidy as a DOM parser for real-world HTML.
   </description>
@@ -294,24 +294,20 @@
       </plugin>
     </plugins>
   </reporting>
-  <repositories>
-    <repository>
-      <id>jtidy</id>
-      <url>http://jtidy.sourceforge.net/maven2/</url>
-    </repository>
-  </repositories>
-  <distributionManagement>
-    <repository>
-      <id>jtidy</id>
-      <url>scp://shell.sourceforge.net/home/groups/j/jt/jtidy/htdocs/maven2/</url>
-    </repository>
-    <snapshotRepository>
-      <id>jtidy</id>
-      <url>scp://shell.sourceforge.net/home/groups/j/jt/jtidy/htdocs/snapshots/</url>
-    </snapshotRepository>
-    <site>
-      <id>jtidy</id>
-      <url>scp://shell.sourceforge.net/home/groups/j/jt/jtidy/htdocs/</url>
-    </site>
-  </distributionManagement>
+    <repositories>
+        <repository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>central</id>
+            <name>libs-release</name>
+            <url>http://sonar.cht:8081/artifactory/libs-release</url>
+        </repository>
+        <repository>
+            <snapshots/>
+            <id>snapshots</id>
+            <name>libs-snapshot</name>
+            <url>http://sonar.cht:8081/artifactory/libs-snapshot</url>
+        </repository>
+    </repositories>
 </project>
