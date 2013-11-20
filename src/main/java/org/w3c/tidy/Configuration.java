@@ -350,24 +350,6 @@ public class Configuration implements Serializable
     }
 
     /**
-     * Parses a property file.
-     * @param filename file name
-     */
-    public void parseFile(final String filename)
-    {
-        try
-        {
-            properties.load(new FileInputStream(filename));
-        }
-        catch (final IOException e)
-        {
-            System.err.println(filename + " " + e.toString());
-            return;
-        }
-        parseProps();
-    }
-
-    /**
      * Is the given String a valid configuration flag?
      * @param name configuration parameter name
      * @return <code>true</code> if the given String is a valid config option

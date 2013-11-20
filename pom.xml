@@ -304,10 +304,18 @@
             <url>http://sonar.cht:8081/artifactory/libs-release</url>
         </repository>
         <repository>
-            <snapshots/>
-            <id>snapshots</id>
-            <name>libs-snapshot</name>
-            <url>http://sonar.cht:8081/artifactory/libs-snapshot</url>
+            <id>jboss</id>
+            <url> https://repository.jboss.org/nexus/content/repositories/</url>
         </repository>
     </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>central</id>
+            <name>plugins-release</name>
+            <url>http://sonar.cht:8081/artifactory/plugins-release</url>
+        </pluginRepository>
+    </pluginRepositories>
 </project>
