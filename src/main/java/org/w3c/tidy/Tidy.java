@@ -64,10 +64,19 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Serializable;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.w3c.tidy.Node.NodeType;
+import org.w3c.tidy.Options.AttrSortStrategy;
+import org.w3c.tidy.Options.DoctypeModes;
+import org.w3c.tidy.Options.DupAttrModes;
+import org.w3c.tidy.Options.TriState;
 
 /**
  * HTML parser and pretty printer.
@@ -87,7 +96,7 @@ public class Tidy implements Serializable
     /**
      * Alias for configuration options accepted in command line.
      */
-    private static final Map CMDLINE_ALIAS = new HashMap();
+    private static final Map<String, String> CMDLINE_ALIAS = new HashMap<String, String>();
 
     static
     {
@@ -115,9 +124,9 @@ public class Tidy implements Serializable
      */
     private PrintWriter errout;
 
-    private PrintWriter stderr;
+    private final PrintWriter stderr;
 
-    private Configuration configuration;
+    private final Configuration configuration;
 
     private String inputStreamName = "InputStream";
 
@@ -125,7 +134,9 @@ public class Tidy implements Serializable
 
     private int parseWarnings;
 
-    private Report report;
+    private final Report report;
+    
+    private Lexer lexer;
 
     /**
      * Instantiates a new Tidy instance. It's reccomended that a new instance is used at each parsing.
@@ -135,11 +146,11 @@ public class Tidy implements Serializable
         this.report = new Report();
         configuration = new Configuration(this.report);
 
-        TagTable tt = new TagTable();
+        final TagTable tt = new TagTable();
         tt.setConfiguration(configuration);
         configuration.tt = tt;
 
-        configuration.errfile = null;
+        configuration.setErrfile(null);
         stderr = new PrintWriter(System.err, true);
         errout = stderr;
     }
@@ -180,7 +191,7 @@ public class Tidy implements Serializable
      * InputStreamName - the name of the input stream (printed in the header information).
      * @param name input stream name
      */
-    public void setInputStreamName(String name)
+    public void setInputStreamName(final String name)
     {
         if (name != null)
         {
@@ -202,25 +213,16 @@ public class Tidy implements Serializable
         return errout;
     }
 
-    public void setErrout(PrintWriter out)
+    public void setErrout(final PrintWriter out)
     {
         this.errout = out;
-    }
-
-    /**
-     * Sets the configuration from a configuration file.
-     * @param filename configuration file name/path.
-     */
-    public void setConfigurationFromFile(String filename)
-    {
-        configuration.parseFile(filename);
     }
 
     /**
      * Sets the configuration from a properties object.
      * @param props Properties object
      */
-    public void setConfigurationFromProps(Properties props)
+    public void setConfigurationFromProps(final Properties props)
     {
         configuration.addProps(props);
     }
@@ -231,8 +233,8 @@ public class Tidy implements Serializable
      */
     public static org.w3c.dom.Document createEmptyDocument()
     {
-        Node document = new Node(Node.ROOT_NODE, new byte[0], 0, 0);
-        Node node = new Node(Node.START_TAG, new byte[0], 0, 0, "html", new TagTable());
+        final Node document = new Node(NodeType.RootNode, new byte[0], 0, 0);
+        final Node node = new Node(NodeType.StartTag, new byte[0], 0, 0, "html", new TagTable());
         if (document != null && node != null)
         {
             document.insertNodeAtStart(node);
@@ -249,10 +251,10 @@ public class Tidy implements Serializable
      * @param out optional destination for pretty-printed document
      * @return parsed org.w3c.tidy.Node
      */
-    public Node parse(InputStream in, OutputStream out)
+    public Node parse(final InputStream in, final OutputStream out)
     {
 
-        StreamIn streamIn = StreamInFactory.getStreamIn(configuration, in);
+        final StreamIn streamIn = StreamInFactory.getStreamIn(configuration, in);
 
         Out o = null;
         if (out != null)
@@ -270,10 +272,10 @@ public class Tidy implements Serializable
      * @param out optional destination for pretty-printed document
      * @return parsed org.w3c.tidy.Node
      */
-    public Node parse(Reader in, OutputStream out)
+    public Node parse(final Reader in, final OutputStream out)
     {
 
-        StreamIn streamIn = StreamInFactory.getStreamIn(configuration, in);
+        final StreamIn streamIn = StreamInFactory.getStreamIn(configuration, in);
 
         Out o = null;
         if (out != null)
@@ -291,9 +293,9 @@ public class Tidy implements Serializable
      * @param out optional destination for pretty-printed document
      * @return parsed org.w3c.tidy.Node
      */
-    public Node parse(Reader in, Writer out)
+    public Node parse(final Reader in, final Writer out)
     {
-        StreamIn streamIn = StreamInFactory.getStreamIn(configuration, in);
+        final StreamIn streamIn = StreamInFactory.getStreamIn(configuration, in);
 
         Out o = null;
         if (out != null)
@@ -311,9 +313,9 @@ public class Tidy implements Serializable
      * @param out optional destination for pretty-printed document
      * @return parsed org.w3c.tidy.Node
      */
-    public Node parse(InputStream in, Writer out)
+    public Node parse(final InputStream in, final Writer out)
     {
-        StreamIn streamIn = StreamInFactory.getStreamIn(configuration, in);
+        final StreamIn streamIn = StreamInFactory.getStreamIn(configuration, in);
 
         Out o = null;
         if (out != null)
@@ -330,9 +332,9 @@ public class Tidy implements Serializable
      * @param out optional output stream
      * @return parsed org.w3c.dom.Document
      */
-    public org.w3c.dom.Document parseDOM(InputStream in, OutputStream out)
+    public org.w3c.dom.Document parseDOM(final InputStream in, final OutputStream out)
     {
-        Node document = parse(in, out);
+        final Node document = parse(in, out);
         if (document != null)
         {
             return (org.w3c.dom.Document) document.getAdapter();
@@ -340,8 +342,8 @@ public class Tidy implements Serializable
         return null;
     }
 
-    public org.w3c.dom.Document parseDOM(Reader in, Writer out) {
-        Node document = parse(in, out);
+    public org.w3c.dom.Document parseDOM(final Reader in, final Writer out) {
+        final Node document = parse(in, out);
         if (document != null) {
             return (org.w3c.dom.Document) document.getAdapter();
         }
@@ -354,7 +356,7 @@ public class Tidy implements Serializable
      * @param doc org.w3c.dom.Document
      * @param out output stream
      */
-    public void pprint(org.w3c.dom.Document doc, OutputStream out)
+    public void pprint(final org.w3c.dom.Document doc, final OutputStream out)
     {
         if (!(doc instanceof DOMDocumentImpl))
         {
@@ -370,7 +372,7 @@ public class Tidy implements Serializable
      * @param node org.w3c.dom.Node. Must be an instance of org.w3c.tidy.DOMNodeImpl.
      * @param out output stream
      */
-    public void pprint(org.w3c.dom.Node node, OutputStream out)
+    public void pprint(final org.w3c.dom.Node node, final OutputStream out)
     {
         if (!(node instanceof DOMNodeImpl))
         {
@@ -380,6 +382,21 @@ public class Tidy implements Serializable
 
         pprint(((DOMNodeImpl) node).adaptee, out);
     }
+    
+    private static boolean showBodyOnly(final Lexer lexer) {
+        switch (lexer.configuration.getBodyOnly()) {
+        case No:
+            return false;
+        case Yes:
+            return true;
+        default:
+            final Node node = lexer.root.findBody();
+            if (node != null && node.implicit) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * Internal routine that actually does the parsing.
@@ -387,9 +404,8 @@ public class Tidy implements Serializable
      * @param o tidy Out
      * @return parsed org.w3c.tidy.Node
      */
-    private Node parse(StreamIn streamIn, Out o)
+    private Node parse(final StreamIn streamIn, final Out o)
     {
-        Lexer lexer;
         Node document = null;
         Node doctype;
         PPrint pprint;
@@ -414,14 +430,14 @@ public class Tidy implements Serializable
         this.report.setFilename(inputStreamName); // #431895 - fix by Dave Bryan 04 Jan 01
 
         // Tidy doesn't alter the doctype for generic XML docs
-        if (configuration.xmlTags)
+        if (configuration.isXmlTags())
         {
             document = ParserImpl.parseXMLDocument(lexer);
             if (!document.checkNodeIntegrity())
             {
-                if (!configuration.quiet)
-                {
+                if (!configuration.isQuiet()) {
                     report.badTree(errout);
+                    errout.flush();
                 }
                 return null;
             }
@@ -434,14 +450,16 @@ public class Tidy implements Serializable
 
             if (!document.checkNodeIntegrity())
             {
-                if (!configuration.quiet)
-                {
-                    this.report.badTree(errout);
+                if (!configuration.isQuiet()) {
+                    report.badTree(errout);
+                    errout.flush();
                 }
                 return null;
             }
+            
+            // tidyCleanAndRepair
 
-            Clean cleaner = new Clean(configuration.tt);
+            final Clean cleaner = new Clean(configuration.tt);
 
             // simplifies <b><b> ... </b> ... </b> etc.
             cleaner.nestedEmphasis(document);
@@ -451,12 +469,12 @@ public class Tidy implements Serializable
             cleaner.bQ2Div(document);
 
             // replaces i by em and b by strong
-            if (configuration.logicalEmphasis)
+            if (configuration.isLogicalEmphasis())
             {
                 cleaner.emFromI(document);
             }
 
-            if (configuration.word2000 && cleaner.isWord2000(document))
+            if (configuration.isWord2000() && cleaner.isWord2000(document))
             {
                 // prune Word2000's <![if ...]> ... <![endif]>
                 cleaner.dropSections(lexer, document);
@@ -466,152 +484,164 @@ public class Tidy implements Serializable
             }
 
             // replaces presentational markup by style rules
-            if (configuration.makeClean || configuration.dropFontTags)
+            if (configuration.isMakeClean() || configuration.isDropFontTags())
             {
-                cleaner.cleanTree(lexer, document);
+                cleaner.cleanDocument(lexer, document);
+            }
+            
+            /*  Reconcile http-equiv meta element with output encoding  */
+            if (!"raw".equals(configuration.getOutCharEncodingName())) {
+            	Clean.verifyHTTPEquiv(lexer, document.findHEAD());
             }
 
             if (!document.checkNodeIntegrity())
             {
                 this.report.badTree(errout);
+                errout.flush();
                 return null;
             }
 
             doctype = document.findDocType();
 
             // remember given doctype
-            if (doctype != null)
-            {
-                doctype = doctype.cloneNode(false);
+            if (doctype != null) {
+            	final AttVal fpi = doctype.getAttrByName("PUBLIC");
+            	if (fpi.hasValue()) {
+            		lexer.givenDoctype = fpi.value;
+            	}
             }
+            
+            final boolean wantNameAttr = configuration.isAnchorAsName();
 
             if (document.content != null)
             {
-                if (configuration.xHTML)
-                {
+                if (configuration.isXHTML() && !configuration.isHtmlOut()) {
                     lexer.setXHTMLDocType(document);
-                }
-                else
-                {
+                    cleaner.fixAnchors(lexer, lexer.root, wantNameAttr, true);
+                    Clean.fixXhtmlNamespace(lexer.root, true);
+                    Clean.fixLanguageInformation(lexer, lexer.root, true, true);
+                } else {
                     lexer.fixDocType(document);
+                    cleaner.fixAnchors(lexer, lexer.root, wantNameAttr, true);
+                    Clean.fixXhtmlNamespace(lexer.root, false);
+                    Clean.fixLanguageInformation(lexer, lexer.root, false, true);
                 }
 
-                if (configuration.tidyMark)
+                if (configuration.isTidyMark())
                 {
                     lexer.addGenerator(document);
                 }
             }
 
             // ensure presence of initial <?XML version="1.0"?>
-            if (configuration.xmlOut && configuration.xmlPi)
+            if (configuration.isXmlOut() && configuration.isXmlDecl())
             {
                 lexer.fixXmlDecl(document);
             }
+            
+            // tidyRunDiagnostics
 
-            if (!configuration.quiet && document.content != null)
+            if (!configuration.isQuiet() && document.content != null)
             {
-                this.report.reportVersion(errout, lexer, inputStreamName, doctype);
+                this.report.reportVersion(lexer);
             }
         }
 
-        if (!configuration.quiet)
-        {
-            parseWarnings = lexer.warnings;
-            parseErrors = lexer.errors;
+        parseWarnings = lexer.warnings;
+        parseErrors = lexer.errors;
+        if (!configuration.isQuiet()) {
             this.report.reportNumWarnings(errout, lexer);
         }
 
-        if (!configuration.quiet && lexer.errors > 0 && !configuration.forceOutput)
+        if (!configuration.isQuiet() && lexer.errors > 0 && !configuration.isForceOutput())
         {
             this.report.needsAuthorIntervention(errout);
         }
 
-        if (!configuration.onlyErrors && (lexer.errors == 0 || configuration.forceOutput))
-        {
-            if (configuration.burstSlides)
-            {
-                Node body;
+        if (configuration.isShowMarkup() && (lexer.errors == 0 || configuration.isForceOutput()) && o != null) {
+        	
+        	// tidySaveStream
+        	
+        	if (configuration.isMakeClean()) {
+        		Clean.wbrToSpace(lexer, lexer.root);
+        	}
+        	
+        	final AttrSortStrategy sortAttrStrat = configuration.getSortAttributes();
+			if (sortAttrStrat != AttrSortStrategy.None) {
+                sortAttributes(lexer.root, sortAttrStrat);
+        	}
+			
+            pprint = new PPrint(configuration);
 
-                body = null;
-                // remove doctype to avoid potential clash with markup introduced when bursting into slides
-
-                // discard the document type
-                doctype = document.findDocType();
-
-                if (doctype != null)
-                {
-                    Node.discardElement(doctype);
-                }
-
-                /* slides use transitional features */
-                lexer.versions |= Dict.VERS_HTML40_LOOSE;
-
-                // and patch up doctype to match
-                if (configuration.xHTML)
-                {
-                    lexer.setXHTMLDocType(document);
-                }
-                else
-                {
-                    lexer.fixDocType(document);
-                }
-
-                // find the body element which may be implicit
-                body = document.findBody(configuration.tt);
-
-                if (body != null)
-                {
-                    pprint = new PPrint(configuration);
-                    if (!configuration.quiet)
-                    {
-                        this.report.reportNumberOfSlides(errout, pprint.countSlides(body));
-                    }
-                    pprint.createSlides(lexer, document);
-                }
-                else if (!configuration.quiet)
-                {
-                    this.report.missingBody(errout);
-                }
+            if (showBodyOnly(lexer)) {
+                // Feature request #434940 - fix by Dave Raggett/Ignacio Vazquez-Abrams 21 Jun 01
+                pprint.printBody(o, lexer, document, configuration.isXmlOut());
             }
-            else if (o != null)
+            else if (configuration.isXmlOut() && !configuration.isXHTML())
             {
-                pprint = new PPrint(configuration);
-
-                if (document.findDocType() == null)
-                {
-                    // only use numeric character references if no doctype could be determined (e.g., because
-                    // the document contains proprietary features) to ensure well-formedness.
-                    configuration.numEntities = true;
-                }
-                if (configuration.bodyOnly)
-                {
-                    // Feature request #434940 - fix by Dave Raggett/Ignacio Vazquez-Abrams 21 Jun 01
-                    pprint.printBody(o, lexer, document, configuration.xmlOut);
-                }
-                else if (configuration.xmlOut && !configuration.xHTML)
-                {
-                    pprint.printXMLTree(o, (short) 0, 0, lexer, document);
-                }
-                else
-                {
-                    pprint.printTree(o, (short) 0, 0, lexer, document);
-                }
-
-                pprint.flushLine(o, 0);
-                o.flush();
+                pprint.printXMLTree(o, (short) 0, 0, lexer, document);
+            }
+            else
+            {
+                pprint.printTree(o, (short) 0, 0, lexer, document);
             }
 
+            pprint.flushLine(o, 0);
+            o.flush();
         }
 
-        if (!configuration.quiet)
-        {
+        // Tidy only shows the error summary when there are errors and/or warnings,
+        // but that can miss e.g. badlayout messages
+        if ((!configuration.isTidyCompat() || parseErrors + parseWarnings > 0) && !configuration.isQuiet()) {
             this.report.errorSummary(lexer);
+        }
+        
+        if (errout != null) {
+        	errout.flush();
         }
 
         return document;
     }
+    
+    private AttVal sortAttVal(final AttVal list, final AttrSortStrategy strat) {
+    	// quick hack for now
+    	final List<AttVal> l = new ArrayList<AttVal>();
+    	AttVal x = list;
+    	while (x != null) {
+    		l.add(x);
+    		x = x.next;
+    	}
+    	if (strat != AttrSortStrategy.Alpha) {
+    		throw new IllegalArgumentException("Unexpected sort strategy: " + strat);
+    	}
+    	if (l.size() < 2) {
+    		return list;
+    	}
+    	Collections.sort(l, new Comparator<AttVal>() {
+			public int compare(final AttVal a1, final AttVal a2) {
+				return a1.attribute.compareTo(a2.attribute);
+			}
+		});
+    	final int n = l.size();
+    	l.add(null);
+    	for (int i = 0; i < n; ++i) {
+			l.get(i).next = l.get(i + 1);
+		}
+		return l.get(0);
+	}
+    
+    private void sortAttributes(final Node node, final AttrSortStrategy strat) {
+    	Node x = node;
+    	while (x != null) {
+	        x.attributes = sortAttVal(x.attributes, strat);
+	        if (x.content != null) {
+	            sortAttributes(x.content, strat);
+	        }
+	        x = x.next;
+    	}
+    }
 
-    /**
+	/**
      * Internal routine that actually does the parsing. The caller can pass either an InputStream or file name. If both
      * are passed, the file name is preferred.
      * @param in input stream (used only if <code>file</code> is null)
@@ -621,7 +651,7 @@ public class Tidy implements Serializable
      * @throws FileNotFoundException if <code>file</code> is not null but it can't be found
      * @throws IOException for errors in reading input stream or file
      */
-    private Node parse(InputStream in, String file, OutputStream out) throws FileNotFoundException, IOException
+    private Node parse(InputStream in, final String file, OutputStream out) throws FileNotFoundException, IOException
     {
 
         StreamIn streamIn;
@@ -643,7 +673,7 @@ public class Tidy implements Serializable
 
         streamIn = StreamInFactory.getStreamIn(configuration, in);
 
-        if (configuration.writeback && (file != null))
+        if (configuration.isWriteback() && file != null)
         {
             out = new FileOutputStream(file);
             outputStreamOpen = true;
@@ -654,7 +684,7 @@ public class Tidy implements Serializable
             o = OutFactory.getOut(this.configuration, out); // normal output stream
         }
 
-        Node node = parse(streamIn, o);
+        final Node node = parse(streamIn, o);
 
         // Try to close the InputStream but only if if we created it.
         if (inputStreamOpen)
@@ -663,7 +693,7 @@ public class Tidy implements Serializable
             {
                 in.close();
             }
-            catch (IOException e)
+            catch (final IOException e)
             {
                 // ignore
             }
@@ -676,7 +706,7 @@ public class Tidy implements Serializable
             {
                 out.close();
             }
-            catch (IOException e)
+            catch (final IOException e)
             {
                 // ignore
             }
@@ -691,20 +721,18 @@ public class Tidy implements Serializable
      * @param node org.w3c.tidy.Node
      * @param out output stream
      */
-    private void pprint(Node node, OutputStream out)
+    private void pprint(final Node node, final OutputStream out)
     {
         PPrint pprint;
 
         if (out != null)
         {
 
-            Out o = OutFactory.getOut(this.configuration, out);
-
-            Lexer lexer = new Lexer(null, this.configuration, this.report);
+            final Out o = OutFactory.getOut(this.configuration, out);
 
             pprint = new PPrint(configuration);
 
-            if (configuration.xmlTags)
+            if (configuration.isXmlTags())
             {
                 pprint.printXMLTree(o, (short) 0, 0, lexer, node);
             }
@@ -719,250 +747,13 @@ public class Tidy implements Serializable
         }
     }
 
-    /**
-     * Command line interface to parser and pretty printer.
-     * @param argv command line parameters
-     */
-    public static void main(String[] argv)
-    {
-        Tidy tidy = new Tidy();
-        int returnCode = tidy.mainExec(argv);
-        System.exit(returnCode);
-    }
 
-    /**
-     * Main method, but returns the return code as an int instead of calling System.exit(code). Needed for testing main
-     * method without shutting down tests.
-     * @param argv command line parameters
-     * @return return code
-     */
-    protected int mainExec(String[] argv)
-    {
-        String file;
-        int argCount = argv.length;
-        int argIndex = 0;
-
-        // read command line
-        Properties properties = new Properties();
-
-        while (argCount > 0)
-        {
-            if (argv[argIndex].startsWith("-"))
-            {
-                // support -foo and --foo
-                String argName = argv[argIndex].toLowerCase();
-                while (argName.length() > 0 && argName.charAt(0) == '-')
-                {
-                    argName = argName.substring(1);
-                }
-
-                // "exclusive" options
-                if (argName.equals("help") || argName.equals("h") || argName.equals("?"))
-                {
-                    this.report.helpText(new PrintWriter(System.out, true));
-                    return 0;
-                }
-                else if (argName.equals("help-config"))
-                {
-                    configuration.printConfigOptions(new PrintWriter(System.out, true), false);
-                    return 0;
-                }
-                else if (argName.equals("show-config"))
-                {
-                    configuration.adjust(); // ensure config is self-consistent
-                    configuration.printConfigOptions(errout, true);
-                    return 0;
-                }
-                else if (argName.equals("version") || argName.equals("v"))
-                {
-                    this.report.showVersion(errout);
-                    return 0;
-                }
-
-                // optional value for non boolean options
-                String argValue = null;
-                if (argCount > 2 && !argv[argIndex + 1].startsWith("-"))
-                {
-                    argValue = argv[argIndex + 1];
-                    --argCount;
-                    ++argIndex;
-                }
-
-                // handle "special" aliases
-                String alias = (String) CMDLINE_ALIAS.get(argName);
-                if (alias != null)
-                {
-                    argName = alias;
-                }
-
-                if (Configuration.isKnownOption(argName)) // handle any standard config option
-                {
-                    properties.setProperty(argName, (argValue == null ? "" : argValue));
-                }
-                else if (argName.equals("config")) // parse a property file
-                {
-                    if (argValue != null)
-                    {
-                        configuration.parseFile(argValue);
-                    }
-                }
-                else if (TidyUtils.isCharEncodingSupported(argName)) // handle any encoding name
-                {
-                    properties.setProperty("char-encoding", argName);
-                }
-                else
-                {
-
-                    for (int i = 0; i < argName.length(); i++)
-                    {
-                        switch (argName.charAt(i))
-                        {
-                            case 'i' :
-                                configuration.indentContent = true;
-                                configuration.smartIndent = true;
-                                break;
-
-                            case 'o' :
-                                configuration.hideEndTags = true;
-                                break;
-
-                            case 'u' :
-                                configuration.upperCaseTags = true;
-                                break;
-
-                            case 'c' :
-                                configuration.makeClean = true;
-                                break;
-
-                            case 'b' :
-                                configuration.makeBare = true;
-                                break;
-
-                            case 'n' :
-                                configuration.numEntities = true;
-                                break;
-
-                            case 'm' :
-                                configuration.writeback = true;
-                                break;
-
-                            case 'e' :
-                                configuration.onlyErrors = true;
-                                break;
-
-                            case 'q' :
-                                configuration.quiet = true;
-                                break;
-
-                            default :
-                                this.report.unknownOption(this.errout, argName.charAt(i));
-                                break;
-                        }
-                    }
-                }
-
-                --argCount;
-                ++argIndex;
-                continue;
-            }
-
-            configuration.addProps(properties);
-
-            // ensure config is self-consistent
-            configuration.adjust();
-
-            // user specified error file
-            if (configuration.errfile != null)
-            {
-
-                String errorfile = "stderr";
-
-                // is it same as the currently opened file?
-                if (!configuration.errfile.equals(errorfile))
-                {
-                    // no so close previous error file
-
-                    if (this.errout != this.stderr)
-                    {
-                        this.errout.close();
-                    }
-
-                    // and try to open the new error file
-                    try
-                    {
-                        this.setErrout(new PrintWriter(new FileWriter(configuration.errfile), true));
-                        errorfile = configuration.errfile;
-                    }
-                    catch (IOException e)
-                    {
-                        // can't be opened so fall back to stderr
-                        errorfile = "stderr";
-                        this.setErrout(stderr);
-                    }
-                }
-            }
-
-            if (argCount > 0)
-            {
-                file = argv[argIndex];
-            }
-            else
-            {
-                file = "stdin";
-            }
-
-            try
-            {
-                parse(null, file, System.out);
-            }
-            catch (FileNotFoundException fnfe)
-            {
-                this.report.unknownFile(this.errout, file);
-            }
-            catch (IOException ioe)
-            {
-                this.report.unknownFile(this.errout, file);
-            }
-
-            --argCount;
-            ++argIndex;
-
-            if (argCount <= 0)
-            {
-                break;
-            }
-        }
-
-        if (this.parseErrors + this.parseWarnings > 0 && !configuration.quiet)
-        {
-            this.report.generalInfo(this.errout);
-        }
-
-        if (this.errout != this.stderr)
-        {
-            this.errout.close();
-        }
-
-        // return status can be used by scripts
-        if (this.parseErrors > 0)
-        {
-            return 2;
-        }
-
-        if (this.parseWarnings > 0)
-        {
-            return 1;
-        }
-
-        // 0 means all is ok
-        return 0;
-    }
 
     /**
      * Attach a TidyMessageListener which will be notified for messages and errors.
      * @param listener TidyMessageListener implementation
      */
-    public void setMessageListener(TidyMessageListener listener)
+    public void setMessageListener(final TidyMessageListener listener)
     {
         this.report.addMessageListener(listener);
     }
@@ -972,9 +763,9 @@ public class Tidy implements Serializable
      * @param spaces number of spaces used for indentation
      * @see Configuration#spaces
      */
-    public void setSpaces(int spaces)
+    public void setSpaces(final int spaces)
     {
-        configuration.spaces = spaces;
+        configuration.setSpaces(spaces);
     }
 
     /**
@@ -984,7 +775,7 @@ public class Tidy implements Serializable
      */
     public int getSpaces()
     {
-        return configuration.spaces;
+        return configuration.getSpaces();
     }
 
     /**
@@ -992,9 +783,9 @@ public class Tidy implements Serializable
      * @param wraplen default wrap margin
      * @see Configuration#wraplen
      */
-    public void setWraplen(int wraplen)
+    public void setWraplen(final int wraplen)
     {
-        configuration.wraplen = wraplen;
+        configuration.setWraplen(wraplen);
     }
 
     /**
@@ -1004,7 +795,7 @@ public class Tidy implements Serializable
      */
     public int getWraplen()
     {
-        return configuration.wraplen;
+        return configuration.getWraplen();
     }
 
     /**
@@ -1012,9 +803,9 @@ public class Tidy implements Serializable
      * @param tabsize tab size in chars
      * @see Configuration#tabsize
      */
-    public void setTabsize(int tabsize)
+    public void setTabsize(final int tabsize)
     {
-        configuration.tabsize = tabsize;
+        configuration.setTabsize(tabsize);
     }
 
     /**
@@ -1024,7 +815,7 @@ public class Tidy implements Serializable
      */
     public int getTabsize()
     {
-        return configuration.tabsize;
+        return configuration.getTabsize();
     }
 
     /**
@@ -1032,9 +823,9 @@ public class Tidy implements Serializable
      * @param errfile file name to write errors to
      * @see Configuration#errfile
      */
-    public void setErrfile(String errfile)
+    public void setErrfile(final String errfile)
     {
-        configuration.errfile = errfile;
+        configuration.setErrfile(errfile);
     }
 
     /**
@@ -1044,7 +835,7 @@ public class Tidy implements Serializable
      */
     public String getErrfile()
     {
-        return configuration.errfile;
+        return configuration.getErrfile();
     }
 
     /**
@@ -1052,9 +843,9 @@ public class Tidy implements Serializable
      * @param writeback <code>true</code>= output tidied markup
      * @see Configuration#writeback
      */
-    public void setWriteback(boolean writeback)
+    public void setWriteback(final boolean writeback)
     {
-        configuration.writeback = writeback;
+        configuration.setWriteback(writeback);
     }
 
     /**
@@ -1064,27 +855,17 @@ public class Tidy implements Serializable
      */
     public boolean getWriteback()
     {
-        return configuration.writeback;
+        return configuration.isWriteback();
     }
 
-    /**
-     * only-errors - if true normal output is suppressed.
-     * @param onlyErrors if <code>true</code> normal output is suppressed.
-     * @see Configuration#onlyErrors
-     */
-    public void setOnlyErrors(boolean onlyErrors)
+    public void setShowMarkup(final boolean showMarkup)
     {
-        configuration.onlyErrors = onlyErrors;
+        configuration.setShowMarkup(showMarkup);
     }
 
-    /**
-     * only-errors - if true normal output is suppressed.
-     * @return <code>true</code> if normal output is suppressed.
-     * @see Configuration#onlyErrors
-     */
-    public boolean getOnlyErrors()
+    public boolean isShowMarkup()
     {
-        return configuration.onlyErrors;
+        return configuration.isShowMarkup();
     }
 
     /**
@@ -1092,9 +873,9 @@ public class Tidy implements Serializable
      * @param showWarnings if <code>false</code> warnings are not shown
      * @see Configuration#showWarnings
      */
-    public void setShowWarnings(boolean showWarnings)
+    public void setShowWarnings(final boolean showWarnings)
     {
-        configuration.showWarnings = showWarnings;
+        configuration.setShowWarnings(showWarnings);
     }
 
     /**
@@ -1104,7 +885,7 @@ public class Tidy implements Serializable
      */
     public boolean getShowWarnings()
     {
-        return configuration.showWarnings;
+        return configuration.isShowWarnings();
     }
 
     /**
@@ -1112,9 +893,9 @@ public class Tidy implements Serializable
      * @param quiet <code>true</code>= don't output summary, warnings or errors
      * @see Configuration#quiet
      */
-    public void setQuiet(boolean quiet)
+    public void setQuiet(final boolean quiet)
     {
-        configuration.quiet = quiet;
+        configuration.setQuiet(quiet);
     }
 
     /**
@@ -1124,7 +905,15 @@ public class Tidy implements Serializable
      */
     public boolean getQuiet()
     {
-        return configuration.quiet;
+        return configuration.isQuiet();
+    }
+    
+    /**
+     * @deprecated Use the TriState version.
+     */
+    @Deprecated
+    public void setIndentContent(final boolean indentContent) {
+    	setIndentContent(TriState.fromBoolean(indentContent));
     }
 
     /**
@@ -1132,9 +921,8 @@ public class Tidy implements Serializable
      * @param indentContent indent content of appropriate tags
      * @see Configuration#indentContent
      */
-    public void setIndentContent(boolean indentContent)
-    {
-        configuration.indentContent = indentContent;
+    public void setIndentContent(final TriState indentContent) {
+        configuration.setIndentContent(indentContent);
     }
 
     /**
@@ -1142,29 +930,8 @@ public class Tidy implements Serializable
      * @return <code>true</code> if tidy will indent content of appropriate tags
      * @see Configuration#indentContent
      */
-    public boolean getIndentContent()
-    {
-        return configuration.indentContent;
-    }
-
-    /**
-     * SmartIndent - does text/block level content effect indentation.
-     * @param smartIndent <code>true</code> if text/block level content should effect indentation
-     * @see Configuration#smartIndent
-     */
-    public void setSmartIndent(boolean smartIndent)
-    {
-        configuration.smartIndent = smartIndent;
-    }
-
-    /**
-     * SmartIndent - does text/block level content effect indentation.
-     * @return <code>true</code> if text/block level content should effect indentation
-     * @see Configuration#smartIndent
-     */
-    public boolean getSmartIndent()
-    {
-        return configuration.smartIndent;
+    public TriState getIndentContent() {
+        return configuration.getIndentContent();
     }
 
     /**
@@ -1172,9 +939,9 @@ public class Tidy implements Serializable
      * @param hideEndTags <code>true</code>= suppress optional end tags
      * @see Configuration#hideEndTags
      */
-    public void setHideEndTags(boolean hideEndTags)
+    public void setHideEndTags(final boolean hideEndTags)
     {
-        configuration.hideEndTags = hideEndTags;
+        configuration.setHideEndTags(hideEndTags);
     }
 
     /**
@@ -1184,7 +951,7 @@ public class Tidy implements Serializable
      */
     public boolean getHideEndTags()
     {
-        return configuration.hideEndTags;
+        return configuration.isHideEndTags();
     }
 
     /**
@@ -1192,9 +959,9 @@ public class Tidy implements Serializable
      * @param xmlTags <code>true</code> if tidy should treat input as XML
      * @see Configuration#xmlTags
      */
-    public void setXmlTags(boolean xmlTags)
+    public void setXmlTags(final boolean xmlTags)
     {
-        configuration.xmlTags = xmlTags;
+        configuration.setXmlTags(xmlTags);
     }
 
     /**
@@ -1204,7 +971,7 @@ public class Tidy implements Serializable
      */
     public boolean getXmlTags()
     {
-        return configuration.xmlTags;
+        return configuration.isXmlTags();
     }
 
     /**
@@ -1212,9 +979,9 @@ public class Tidy implements Serializable
      * @param xmlOut <code>true</code> if tidy should create output as xml
      * @see Configuration#xmlOut
      */
-    public void setXmlOut(boolean xmlOut)
+    public void setXmlOut(final boolean xmlOut)
     {
-        configuration.xmlOut = xmlOut;
+        configuration.setXmlOut(xmlOut);
     }
 
     /**
@@ -1224,7 +991,7 @@ public class Tidy implements Serializable
      */
     public boolean getXmlOut()
     {
-        return configuration.xmlOut;
+        return configuration.isXmlOut();
     }
 
     /**
@@ -1232,9 +999,9 @@ public class Tidy implements Serializable
      * @param xhtml <code>true</code> if tidy should output XHTML
      * @see Configuration#xHTML
      */
-    public void setXHTML(boolean xhtml)
+    public void setXHTML(final boolean xhtml)
     {
-        configuration.xHTML = xhtml;
+        configuration.setXHTML(xhtml);
     }
 
     /**
@@ -1244,7 +1011,7 @@ public class Tidy implements Serializable
      */
     public boolean getXHTML()
     {
-        return configuration.xHTML;
+        return configuration.isXHTML();
     }
 
     /**
@@ -1252,9 +1019,9 @@ public class Tidy implements Serializable
      * @param upperCaseTags <code>true</code> if tidy should output tags in upper case (default is lowercase)
      * @see Configuration#upperCaseTags
      */
-    public void setUpperCaseTags(boolean upperCaseTags)
+    public void setUpperCaseTags(final boolean upperCaseTags)
     {
-        configuration.upperCaseTags = upperCaseTags;
+        configuration.setUpperCaseTags(upperCaseTags);
     }
 
     /**
@@ -1264,7 +1031,7 @@ public class Tidy implements Serializable
      */
     public boolean getUpperCaseTags()
     {
-        return configuration.upperCaseTags;
+        return configuration.isUpperCaseTags();
     }
 
     /**
@@ -1272,9 +1039,9 @@ public class Tidy implements Serializable
      * @param upperCaseAttrs <code>true</code> if tidy should output attributes in upper case (default is lowercase)
      * @see Configuration#upperCaseAttrs
      */
-    public void setUpperCaseAttrs(boolean upperCaseAttrs)
+    public void setUpperCaseAttrs(final boolean upperCaseAttrs)
     {
-        configuration.upperCaseAttrs = upperCaseAttrs;
+        configuration.setUpperCaseAttrs(upperCaseAttrs);
     }
 
     /**
@@ -1284,7 +1051,7 @@ public class Tidy implements Serializable
      */
     public boolean getUpperCaseAttrs()
     {
-        return configuration.upperCaseAttrs;
+        return configuration.isUpperCaseAttrs();
     }
 
     /**
@@ -1292,9 +1059,9 @@ public class Tidy implements Serializable
      * @param makeClean true to remove presentational clutter
      * @see Configuration#makeClean
      */
-    public void setMakeClean(boolean makeClean)
+    public void setMakeClean(final boolean makeClean)
     {
-        configuration.makeClean = makeClean;
+        configuration.setMakeClean(makeClean);
     }
 
     /**
@@ -1304,7 +1071,7 @@ public class Tidy implements Serializable
      */
     public boolean getMakeClean()
     {
-        return configuration.makeClean;
+        return configuration.isMakeClean();
     }
 
     /**
@@ -1312,9 +1079,9 @@ public class Tidy implements Serializable
      * @param makeBare true to remove Microsoft cruft
      * @see Configuration#makeBare
      */
-    public void setMakeBare(boolean makeBare)
+    public void setMakeBare(final boolean makeBare)
     {
-        configuration.makeBare = makeBare;
+        configuration.setMakeBare(makeBare);
     }
 
     /**
@@ -1324,7 +1091,7 @@ public class Tidy implements Serializable
      */
     public boolean getMakeBare()
     {
-        return configuration.makeBare;
+        return configuration.isMakeBare();
     }
 
     /**
@@ -1332,9 +1099,9 @@ public class Tidy implements Serializable
      * @param breakBeforeBR <code>true</code> if tidy should output a newline before &lt;br&gt;
      * @see Configuration#breakBeforeBR
      */
-    public void setBreakBeforeBR(boolean breakBeforeBR)
+    public void setBreakBeforeBR(final boolean breakBeforeBR)
     {
-        configuration.breakBeforeBR = breakBeforeBR;
+        configuration.setBreakBeforeBR(breakBeforeBR);
     }
 
     /**
@@ -1344,27 +1111,7 @@ public class Tidy implements Serializable
      */
     public boolean getBreakBeforeBR()
     {
-        return configuration.breakBeforeBR;
-    }
-
-    /**
-     * <code>split</code>- create slides on each h2 element.
-     * @param burstSlides <code>true</code> if tidy should create slides on each h2 element
-     * @see Configuration#burstSlides
-     */
-    public void setBurstSlides(boolean burstSlides)
-    {
-        configuration.burstSlides = burstSlides;
-    }
-
-    /**
-     * <code>split</code>- create slides on each h2 element.
-     * @return <code>true</code> if tidy will create slides on each h2 element
-     * @see Configuration#burstSlides
-     */
-    public boolean getBurstSlides()
-    {
-        return configuration.burstSlides;
+        return configuration.isBreakBeforeBR();
     }
 
     /**
@@ -1373,9 +1120,9 @@ public class Tidy implements Serializable
      * @param numEntities <code>true</code> if tidy should output entities in the numeric form.
      * @see Configuration#numEntities
      */
-    public void setNumEntities(boolean numEntities)
+    public void setNumEntities(final boolean numEntities)
     {
-        configuration.numEntities = numEntities;
+        configuration.setNumEntities(numEntities);
     }
 
     /**
@@ -1386,7 +1133,7 @@ public class Tidy implements Serializable
      */
     public boolean getNumEntities()
     {
-        return configuration.numEntities;
+        return configuration.isNumEntities();
     }
 
     /**
@@ -1394,9 +1141,9 @@ public class Tidy implements Serializable
      * @param quoteMarks <code>true</code> if tidy should output " marks as &amp;quot;
      * @see Configuration#quoteMarks
      */
-    public void setQuoteMarks(boolean quoteMarks)
+    public void setQuoteMarks(final boolean quoteMarks)
     {
-        configuration.quoteMarks = quoteMarks;
+        configuration.setQuoteMarks(quoteMarks);
     }
 
     /**
@@ -1406,7 +1153,7 @@ public class Tidy implements Serializable
      */
     public boolean getQuoteMarks()
     {
-        return configuration.quoteMarks;
+        return configuration.isQuoteMarks();
     }
 
     /**
@@ -1414,9 +1161,9 @@ public class Tidy implements Serializable
      * @param quoteNbsp <code>true</code> if tidy should output non-breaking space as entity
      * @see Configuration#quoteNbsp
      */
-    public void setQuoteNbsp(boolean quoteNbsp)
+    public void setQuoteNbsp(final boolean quoteNbsp)
     {
-        configuration.quoteNbsp = quoteNbsp;
+        configuration.setQuoteNbsp(quoteNbsp);
     }
 
     /**
@@ -1426,7 +1173,7 @@ public class Tidy implements Serializable
      */
     public boolean getQuoteNbsp()
     {
-        return configuration.quoteNbsp;
+        return configuration.isQuoteNbsp();
     }
 
     /**
@@ -1434,9 +1181,9 @@ public class Tidy implements Serializable
      * @param quoteAmpersand <code>true</code> if tidy should output naked ampersand as &amp;
      * @see Configuration#quoteAmpersand
      */
-    public void setQuoteAmpersand(boolean quoteAmpersand)
+    public void setQuoteAmpersand(final boolean quoteAmpersand)
     {
-        configuration.quoteAmpersand = quoteAmpersand;
+        configuration.setQuoteAmpersand(quoteAmpersand);
     }
 
     /**
@@ -1446,7 +1193,7 @@ public class Tidy implements Serializable
      */
     public boolean getQuoteAmpersand()
     {
-        return configuration.quoteAmpersand;
+        return configuration.isQuoteAmpersand();
     }
 
     /**
@@ -1454,9 +1201,9 @@ public class Tidy implements Serializable
      * @param wrapAttVals <code>true</code> if tidy should wrap within attribute values
      * @see Configuration#wrapAttVals
      */
-    public void setWrapAttVals(boolean wrapAttVals)
+    public void setWrapAttVals(final boolean wrapAttVals)
     {
-        configuration.wrapAttVals = wrapAttVals;
+        configuration.setWrapAttVals(wrapAttVals);
     }
 
     /**
@@ -1466,7 +1213,7 @@ public class Tidy implements Serializable
      */
     public boolean getWrapAttVals()
     {
-        return configuration.wrapAttVals;
+        return configuration.isWrapAttVals();
     }
 
     /**
@@ -1474,9 +1221,9 @@ public class Tidy implements Serializable
      * @param wrapScriptlets <code>true</code> if tidy should wrap within JavaScript string literals
      * @see Configuration#wrapScriptlets
      */
-    public void setWrapScriptlets(boolean wrapScriptlets)
+    public void setWrapScriptlets(final boolean wrapScriptlets)
     {
-        configuration.wrapScriptlets = wrapScriptlets;
+        configuration.setWrapScriptlets(wrapScriptlets);
     }
 
     /**
@@ -1486,7 +1233,7 @@ public class Tidy implements Serializable
      */
     public boolean getWrapScriptlets()
     {
-        return configuration.wrapScriptlets;
+        return configuration.isWrapScriptlets();
     }
 
     /**
@@ -1494,9 +1241,9 @@ public class Tidy implements Serializable
      * @param wrapSection <code>true</code> if tidy should wrap within &lt;![ ... ]&gt; section tags
      * @see Configuration#wrapSection
      */
-    public void setWrapSection(boolean wrapSection)
+    public void setWrapSection(final boolean wrapSection)
     {
-        configuration.wrapSection = wrapSection;
+        configuration.setWrapSection(wrapSection);
     }
 
     /**
@@ -1506,7 +1253,7 @@ public class Tidy implements Serializable
      */
     public boolean getWrapSection()
     {
-        return configuration.wrapSection;
+        return configuration.isWrapSection();
     }
 
     /**
@@ -1514,9 +1261,9 @@ public class Tidy implements Serializable
      * @param altText default text for alt attribute
      * @see Configuration#altText
      */
-    public void setAltText(String altText)
+    public void setAltText(final String altText)
     {
-        configuration.altText = altText;
+        configuration.setAltText(altText);
     }
 
     /**
@@ -1526,17 +1273,17 @@ public class Tidy implements Serializable
      */
     public String getAltText()
     {
-        return configuration.altText;
+        return configuration.getAltText();
     }
 
     /**
      * <code>add-xml-pi</code>- add &lt;?xml?&gt; for XML docs.
-     * @param xmlPi <code>true</code> if tidy should add &lt;?xml?&gt; for XML docs
+     * @param xmlDecl <code>true</code> if tidy should add &lt;?xml?&gt; for XML docs
      * @see Configuration#xmlPi
      */
-    public void setXmlPi(boolean xmlPi)
+    public void setXmlDecl(final boolean xmlDecl)
     {
-        configuration.xmlPi = xmlPi;
+        configuration.setXmlDecl(xmlDecl);
     }
 
     /**
@@ -1544,9 +1291,9 @@ public class Tidy implements Serializable
      * @return <code>true</code> if tidy will add &lt;?xml?&gt; for XML docs
      * @see Configuration#xmlPi
      */
-    public boolean getXmlPi()
+    public boolean getXmlDecl()
     {
-        return configuration.xmlPi;
+        return configuration.isXmlDecl();
     }
 
     /**
@@ -1554,9 +1301,9 @@ public class Tidy implements Serializable
      * @param dropFontTags <code>true</code> if tidy should discard presentation tags
      * @see Configuration#dropFontTags
      */
-    public void setDropFontTags(boolean dropFontTags)
+    public void setDropFontTags(final boolean dropFontTags)
     {
-        configuration.dropFontTags = dropFontTags;
+        configuration.setDropFontTags(dropFontTags);
     }
 
     /**
@@ -1566,7 +1313,7 @@ public class Tidy implements Serializable
      */
     public boolean getDropFontTags()
     {
-        return configuration.dropFontTags;
+        return configuration.isDropFontTags();
     }
 
     /**
@@ -1574,9 +1321,9 @@ public class Tidy implements Serializable
      * @param dropProprietaryAttributes <code>true</code> if tidy should discard proprietary attributes
      * @see Configuration#dropProprietaryAttributes
      */
-    public void setDropProprietaryAttributes(boolean dropProprietaryAttributes)
+    public void setDropProprietaryAttributes(final boolean dropProprietaryAttributes)
     {
-        configuration.dropProprietaryAttributes = dropProprietaryAttributes;
+        configuration.setDropProprietaryAttributes(dropProprietaryAttributes);
     }
 
     /**
@@ -1586,7 +1333,7 @@ public class Tidy implements Serializable
      */
     public boolean getDropProprietaryAttributes()
     {
-        return configuration.dropProprietaryAttributes;
+        return configuration.isDropProprietaryAttributes();
     }
 
     /**
@@ -1594,9 +1341,9 @@ public class Tidy implements Serializable
      * @param dropEmptyParas <code>true</code> if tidy should discard empty p elements
      * @see Configuration#dropEmptyParas
      */
-    public void setDropEmptyParas(boolean dropEmptyParas)
+    public void setDropEmptyParas(final boolean dropEmptyParas)
     {
-        configuration.dropEmptyParas = dropEmptyParas;
+        configuration.setDropEmptyParas(dropEmptyParas);
     }
 
     /**
@@ -1606,7 +1353,7 @@ public class Tidy implements Serializable
      */
     public boolean getDropEmptyParas()
     {
-        return configuration.dropEmptyParas;
+        return configuration.isDropEmptyParas();
     }
 
     /**
@@ -1614,9 +1361,9 @@ public class Tidy implements Serializable
      * @param fixComments <code>true</code> if tidy should fix comments with adjacent hyphens
      * @see Configuration#fixComments
      */
-    public void setFixComments(boolean fixComments)
+    public void setFixComments(final boolean fixComments)
     {
-        configuration.fixComments = fixComments;
+        configuration.setFixComments(fixComments);
     }
 
     /**
@@ -1626,7 +1373,7 @@ public class Tidy implements Serializable
      */
     public boolean getFixComments()
     {
-        return configuration.fixComments;
+        return configuration.isFixComments();
     }
 
     /**
@@ -1634,9 +1381,9 @@ public class Tidy implements Serializable
      * @param wrapAsp <code>true</code> if tidy should wrap within ASP pseudo elements
      * @see Configuration#wrapAsp
      */
-    public void setWrapAsp(boolean wrapAsp)
+    public void setWrapAsp(final boolean wrapAsp)
     {
-        configuration.wrapAsp = wrapAsp;
+        configuration.setWrapAsp(wrapAsp);
     }
 
     /**
@@ -1646,7 +1393,7 @@ public class Tidy implements Serializable
      */
     public boolean getWrapAsp()
     {
-        return configuration.wrapAsp;
+        return configuration.isWrapAsp();
     }
 
     /**
@@ -1654,9 +1401,9 @@ public class Tidy implements Serializable
      * @param wrapJste <code>true</code> if tidy should wrap within JSTE pseudo elements
      * @see Configuration#wrapJste
      */
-    public void setWrapJste(boolean wrapJste)
+    public void setWrapJste(final boolean wrapJste)
     {
-        configuration.wrapJste = wrapJste;
+        configuration.setWrapJste(wrapJste);
     }
 
     /**
@@ -1666,7 +1413,7 @@ public class Tidy implements Serializable
      */
     public boolean getWrapJste()
     {
-        return configuration.wrapJste;
+        return configuration.isWrapJste();
     }
 
     /**
@@ -1674,9 +1421,9 @@ public class Tidy implements Serializable
      * @param wrapPhp <code>true</code> if tidy should wrap within PHP pseudo elements
      * @see Configuration#wrapPhp
      */
-    public void setWrapPhp(boolean wrapPhp)
+    public void setWrapPhp(final boolean wrapPhp)
     {
-        configuration.wrapPhp = wrapPhp;
+        configuration.setWrapPhp(wrapPhp);
     }
 
     /**
@@ -1686,7 +1433,7 @@ public class Tidy implements Serializable
      */
     public boolean getWrapPhp()
     {
-        return configuration.wrapPhp;
+        return configuration.isWrapPhp();
     }
 
     /**
@@ -1694,9 +1441,9 @@ public class Tidy implements Serializable
      * @param fixBackslash <code>true</code> if tidy should fix URLs by replacing \ with /
      * @see Configuration#fixBackslash
      */
-    public void setFixBackslash(boolean fixBackslash)
+    public void setFixBackslash(final boolean fixBackslash)
     {
-        configuration.fixBackslash = fixBackslash;
+        configuration.setFixBackslash(fixBackslash);
     }
 
     /**
@@ -1706,7 +1453,7 @@ public class Tidy implements Serializable
      */
     public boolean getFixBackslash()
     {
-        return configuration.fixBackslash;
+        return configuration.isFixBackslash();
     }
 
     /**
@@ -1714,9 +1461,9 @@ public class Tidy implements Serializable
      * @param indentAttributes <code>true</code> if tidy should output a newline+indent before each attribute
      * @see Configuration#indentAttributes
      */
-    public void setIndentAttributes(boolean indentAttributes)
+    public void setIndentAttributes(final boolean indentAttributes)
     {
-        configuration.indentAttributes = indentAttributes;
+        configuration.setIndentAttributes(indentAttributes);
     }
 
     /**
@@ -1726,7 +1473,7 @@ public class Tidy implements Serializable
      */
     public boolean getIndentAttributes()
     {
-        return configuration.indentAttributes;
+        return configuration.isIndentAttributes();
     }
 
     /**
@@ -1737,11 +1484,11 @@ public class Tidy implements Serializable
      * @see Configuration#docTypeStr
      * @see Configuration#docTypeMode
      */
-    public void setDocType(String doctype)
+    public void setDocType(final String doctype)
     {
         if (doctype != null)
         {
-            configuration.docTypeStr = (String) ParsePropertyImpl.DOCTYPE.parse(doctype, "doctype", configuration);
+            configuration.setDocTypeStr((String) ParsePropertyImpl.DOCTYPE.parse(doctype, Option.Doctype, configuration));
         }
     }
 
@@ -1752,28 +1499,34 @@ public class Tidy implements Serializable
      * @see Configuration#docTypeStr
      * @see Configuration#docTypeMode
      */
-    public String getDocType()
-    {
+    public String getDocType() {
         String result = null;
-        switch (configuration.docTypeMode)
-        {
-            case Configuration.DOCTYPE_OMIT :
+        switch (configuration.getDocTypeMode()) {
+            case Omit:
                 result = "omit";
                 break;
-            case Configuration.DOCTYPE_AUTO :
+            case Auto:
                 result = "auto";
                 break;
-            case Configuration.DOCTYPE_STRICT :
+            case Strict:
                 result = "strict";
                 break;
-            case Configuration.DOCTYPE_LOOSE :
+            case Loose:
                 result = "loose";
                 break;
-            case Configuration.DOCTYPE_USER :
-                result = configuration.docTypeStr;
+            case User:
+                result = configuration.getDocTypeStr();
                 break;
         }
         return result;
+    }
+    
+    public void setDocTypeMode(final DoctypeModes docTypeMode) {
+    	configuration.setDocTypeMode(docTypeMode);
+    }
+    
+    public DoctypeModes getDocTypeMode() {
+    	return configuration.getDocTypeMode();
     }
 
     /**
@@ -1781,9 +1534,9 @@ public class Tidy implements Serializable
      * @param logicalEmphasis <code>true</code> if tidy should replace i by em and b by strong
      * @see Configuration#logicalEmphasis
      */
-    public void setLogicalEmphasis(boolean logicalEmphasis)
+    public void setLogicalEmphasis(final boolean logicalEmphasis)
     {
-        configuration.logicalEmphasis = logicalEmphasis;
+        configuration.setLogicalEmphasis(logicalEmphasis);
     }
 
     /**
@@ -1793,7 +1546,7 @@ public class Tidy implements Serializable
      */
     public boolean getLogicalEmphasis()
     {
-        return configuration.logicalEmphasis;
+        return configuration.isLogicalEmphasis();
     }
 
     /**
@@ -1803,9 +1556,9 @@ public class Tidy implements Serializable
      * @param xmlPIs <code>true</code> if tidy should expect a ?> at the end of processing instructions
      * @see Configuration#xmlPIs
      */
-    public void setXmlPIs(boolean xmlPIs)
+    public void setXmlPIs(final boolean xmlPIs)
     {
-        configuration.xmlPIs = xmlPIs;
+        configuration.setXmlPIs(xmlPIs);
     }
 
     /**
@@ -1817,7 +1570,7 @@ public class Tidy implements Serializable
      */
     public boolean getXmlPIs()
     {
-        return configuration.xmlPIs;
+        return configuration.isXmlPIs();
     }
 
     /**
@@ -1825,9 +1578,9 @@ public class Tidy implements Serializable
      * @param encloseText <code>true</code> if tidy should wrap text at body in &lt;p&gt;'s.
      * @see Configuration#encloseBodyText
      */
-    public void setEncloseText(boolean encloseText)
+    public void setEncloseText(final boolean encloseText)
     {
-        configuration.encloseBodyText = encloseText;
+        configuration.setEncloseBodyText(encloseText);
     }
 
     /**
@@ -1837,7 +1590,7 @@ public class Tidy implements Serializable
      */
     public boolean getEncloseText()
     {
-        return configuration.encloseBodyText;
+        return configuration.isEncloseBodyText();
     }
 
     /**
@@ -1845,9 +1598,9 @@ public class Tidy implements Serializable
      * @param encloseBlockText <code>true</code> if tidy should wrap text text in blocks in &lt;p&gt;'s.
      * @see Configuration#encloseBlockText
      */
-    public void setEncloseBlockText(boolean encloseBlockText)
+    public void setEncloseBlockText(final boolean encloseBlockText)
     {
-        configuration.encloseBlockText = encloseBlockText;
+        configuration.setEncloseBlockText(encloseBlockText);
     }
 
     /**
@@ -1857,7 +1610,7 @@ public class Tidy implements Serializable
      */
     public boolean getEncloseBlockText()
     {
-        return configuration.encloseBlockText;
+        return configuration.isEncloseBlockText();
     }
 
     /**
@@ -1865,9 +1618,9 @@ public class Tidy implements Serializable
      * @param word2000 <code>true</code> if tidy should clean word2000 documents
      * @see Configuration#word2000
      */
-    public void setWord2000(boolean word2000)
+    public void setWord2000(final boolean word2000)
     {
-        configuration.word2000 = word2000;
+        configuration.setWord2000(word2000);
     }
 
     /**
@@ -1877,7 +1630,7 @@ public class Tidy implements Serializable
      */
     public boolean getWord2000()
     {
-        return configuration.word2000;
+        return configuration.isWord2000();
     }
 
     /**
@@ -1885,9 +1638,9 @@ public class Tidy implements Serializable
      * @param tidyMark <code>true</code> if tidy should add meta element indicating tidied doc
      * @see Configuration#tidyMark
      */
-    public void setTidyMark(boolean tidyMark)
+    public void setTidyMark(final boolean tidyMark)
     {
-        configuration.tidyMark = tidyMark;
+        configuration.setTidyMark(tidyMark);
     }
 
     /**
@@ -1897,7 +1650,7 @@ public class Tidy implements Serializable
      */
     public boolean getTidyMark()
     {
-        return configuration.tidyMark;
+        return configuration.isTidyMark();
     }
 
     /**
@@ -1905,9 +1658,9 @@ public class Tidy implements Serializable
      * @param xmlSpace <code>true</code> if tidy should add xml:space attr as needed
      * @see Configuration#xmlSpace
      */
-    public void setXmlSpace(boolean xmlSpace)
+    public void setXmlSpace(final boolean xmlSpace)
     {
-        configuration.xmlSpace = xmlSpace;
+        configuration.setXmlSpace(xmlSpace);
     }
 
     /**
@@ -1917,7 +1670,7 @@ public class Tidy implements Serializable
      */
     public boolean getXmlSpace()
     {
-        return configuration.xmlSpace;
+        return configuration.isXmlSpace();
     }
 
     /**
@@ -1925,9 +1678,9 @@ public class Tidy implements Serializable
      * @param emacs <code>true</code> if tidy should format error output for GNU Emacs
      * @see Configuration#emacs
      */
-    public void setEmacs(boolean emacs)
+    public void setEmacs(final boolean emacs)
     {
-        configuration.emacs = emacs;
+        configuration.setEmacs(emacs);
     }
 
     /**
@@ -1937,7 +1690,7 @@ public class Tidy implements Serializable
      */
     public boolean getEmacs()
     {
-        return configuration.emacs;
+        return configuration.isEmacs();
     }
 
     /**
@@ -1945,9 +1698,9 @@ public class Tidy implements Serializable
      * @param literalAttribs <code>true</code> if attributes may use newlines
      * @see Configuration#literalAttribs
      */
-    public void setLiteralAttribs(boolean literalAttribs)
+    public void setLiteralAttribs(final boolean literalAttribs)
     {
-        configuration.literalAttribs = literalAttribs;
+        configuration.setLiteralAttribs(literalAttribs);
     }
 
     /**
@@ -1957,7 +1710,15 @@ public class Tidy implements Serializable
      */
     public boolean getLiteralAttribs()
     {
-        return configuration.literalAttribs;
+        return configuration.isLiteralAttribs();
+    }
+    
+    /**
+     * @deprecated Use the TriState version.
+     */
+    @Deprecated
+    public void setPrintBodyOnly(final boolean bodyOnly) {
+    	setPrintBodyOnly(TriState.fromBoolean(bodyOnly));
     }
 
     /**
@@ -1965,18 +1726,18 @@ public class Tidy implements Serializable
      * @param bodyOnly true = print only the document body
      * @see Configuration#bodyOnly
      */
-    public void setPrintBodyOnly(boolean bodyOnly)
+    public void setPrintBodyOnly(final TriState bodyOnly)
     {
-        configuration.bodyOnly = bodyOnly;
+        configuration.setBodyOnly(bodyOnly);
     }
 
     /**
      * <code>print-body-only</code>- output BODY content only.
      * @return true if tidy will print only the document body
      */
-    public boolean getPrintBodyOnly()
+    public TriState getPrintBodyOnly()
     {
-        return configuration.bodyOnly;
+        return configuration.getBodyOnly();
     }
 
     /**
@@ -1984,9 +1745,9 @@ public class Tidy implements Serializable
      * @param fixUri true = fix uri references
      * @see Configuration#fixUri
      */
-    public void setFixUri(boolean fixUri)
+    public void setFixUri(final boolean fixUri)
     {
-        configuration.fixUri = fixUri;
+        configuration.setFixUri(fixUri);
     }
 
     /**
@@ -1995,7 +1756,7 @@ public class Tidy implements Serializable
      */
     public boolean getFixUri()
     {
-        return configuration.fixUri;
+        return configuration.isFixUri();
     }
 
     /**
@@ -2003,9 +1764,9 @@ public class Tidy implements Serializable
      * @param lowerLiterals true = folds known attribute values to lower case
      * @see Configuration#lowerLiterals
      */
-    public void setLowerLiterals(boolean lowerLiterals)
+    public void setLowerLiterals(final boolean lowerLiterals)
     {
-        configuration.lowerLiterals = lowerLiterals;
+        configuration.setLowerLiterals(lowerLiterals);
     }
 
     /**
@@ -2014,7 +1775,7 @@ public class Tidy implements Serializable
      */
     public boolean getLowerLiterals()
     {
-        return configuration.lowerLiterals;
+        return configuration.isLowerLiterals();
     }
 
     /**
@@ -2022,9 +1783,9 @@ public class Tidy implements Serializable
      * @param hideComments true = hides all comments in output
      * @see Configuration#hideComments
      */
-    public void setHideComments(boolean hideComments)
+    public void setHideComments(final boolean hideComments)
     {
-        configuration.hideComments = hideComments;
+        configuration.setHideComments(hideComments);
     }
 
     /**
@@ -2033,7 +1794,7 @@ public class Tidy implements Serializable
      */
     public boolean getHideComments()
     {
-        return configuration.hideComments;
+        return configuration.isHideComments();
     }
 
     /**
@@ -2041,9 +1802,9 @@ public class Tidy implements Serializable
      * @param indentCdata true = indent CDATA sections
      * @see Configuration#indentCdata
      */
-    public void setIndentCdata(boolean indentCdata)
+    public void setIndentCdata(final boolean indentCdata)
     {
-        configuration.indentCdata = indentCdata;
+        configuration.setIndentCdata(indentCdata);
     }
 
     /**
@@ -2052,7 +1813,7 @@ public class Tidy implements Serializable
      */
     public boolean getIndentCdata()
     {
-        return configuration.indentCdata;
+        return configuration.isIndentCdata();
     }
 
     /**
@@ -2060,9 +1821,9 @@ public class Tidy implements Serializable
      * @param forceOutput true = output document even if errors were found
      * @see Configuration#forceOutput
      */
-    public void setForceOutput(boolean forceOutput)
+    public void setForceOutput(final boolean forceOutput)
     {
-        configuration.forceOutput = forceOutput;
+        configuration.setForceOutput(forceOutput);
     }
 
     /**
@@ -2071,7 +1832,7 @@ public class Tidy implements Serializable
      */
     public boolean getForceOutput()
     {
-        return configuration.forceOutput;
+        return configuration.isForceOutput();
     }
 
     /**
@@ -2079,9 +1840,9 @@ public class Tidy implements Serializable
      * @param showErrors number of errors to put out
      * @see Configuration#showErrors
      */
-    public void setShowErrors(int showErrors)
+    public void setShowErrors(final int showErrors)
     {
-        configuration.showErrors = showErrors;
+        configuration.setShowErrors(showErrors);
     }
 
     /**
@@ -2090,7 +1851,7 @@ public class Tidy implements Serializable
      */
     public int getShowErrors()
     {
-        return configuration.showErrors;
+        return configuration.getShowErrors();
     }
 
     /**
@@ -2098,9 +1859,9 @@ public class Tidy implements Serializable
      * @param asciiChars true = convert quotes and dashes to nearest ASCII char
      * @see Configuration#asciiChars
      */
-    public void setAsciiChars(boolean asciiChars)
+    public void setAsciiChars(final boolean asciiChars)
     {
-        configuration.asciiChars = asciiChars;
+        configuration.setAsciiChars(asciiChars);
     }
 
     /**
@@ -2109,7 +1870,7 @@ public class Tidy implements Serializable
      */
     public boolean getAsciiChars()
     {
-        return configuration.asciiChars;
+        return configuration.isAsciiChars();
     }
 
     /**
@@ -2117,9 +1878,9 @@ public class Tidy implements Serializable
      * @param joinClasses true = join multiple class attributes
      * @see Configuration#joinClasses
      */
-    public void setJoinClasses(boolean joinClasses)
+    public void setJoinClasses(final boolean joinClasses)
     {
-        configuration.joinClasses = joinClasses;
+        configuration.setJoinClasses(joinClasses);
     }
 
     /**
@@ -2128,7 +1889,7 @@ public class Tidy implements Serializable
      */
     public boolean getJoinClasses()
     {
-        return configuration.joinClasses;
+        return configuration.isJoinClasses();
     }
 
     /**
@@ -2136,9 +1897,9 @@ public class Tidy implements Serializable
      * @param joinStyles true = join multiple style attributes
      * @see Configuration#joinStyles
      */
-    public void setJoinStyles(boolean joinStyles)
+    public void setJoinStyles(final boolean joinStyles)
     {
-        configuration.joinStyles = joinStyles;
+        configuration.setJoinStyles(joinStyles);
     }
 
     /**
@@ -2147,7 +1908,7 @@ public class Tidy implements Serializable
      */
     public boolean getJoinStyles()
     {
-        return configuration.joinStyles;
+        return configuration.isJoinStyles();
     }
 
     /**
@@ -2155,9 +1916,9 @@ public class Tidy implements Serializable
      * @param trim-empty-elements true = trim empty elements
      * @see Configuration#trimEmpty
      */
-    public void setTrimEmptyElements(boolean trimEmpty)
+    public void setTrimEmptyElements(final boolean trimEmpty)
     {
-        configuration.trimEmpty = trimEmpty;
+        configuration.setTrimEmpty(trimEmpty);
     }
 
     /**
@@ -2166,7 +1927,7 @@ public class Tidy implements Serializable
      */
     public boolean getTrimEmptyElements()
     {
-        return configuration.trimEmpty;
+        return configuration.isTrimEmpty();
     }
 
     /**
@@ -2174,9 +1935,9 @@ public class Tidy implements Serializable
      * @param replaceColor true = replace hex color attribute values with names
      * @see Configuration#replaceColor
      */
-    public void setReplaceColor(boolean replaceColor)
+    public void setReplaceColor(final boolean replaceColor)
     {
-        configuration.replaceColor = replaceColor;
+        configuration.setReplaceColor(replaceColor);
     }
 
     /**
@@ -2185,7 +1946,7 @@ public class Tidy implements Serializable
      */
     public boolean getReplaceColor()
     {
-        return configuration.replaceColor;
+        return configuration.isReplaceColor();
     }
 
     /**
@@ -2193,9 +1954,9 @@ public class Tidy implements Serializable
      * @param escapeCdata true = replace CDATA sections with escaped text
      * @see Configuration#escapeCdata
      */
-    public void setEscapeCdata(boolean escapeCdata)
+    public void setEscapeCdata(final boolean escapeCdata)
     {
-        configuration.escapeCdata = escapeCdata;
+        configuration.setEscapeCdata(escapeCdata);
     }
 
     /**
@@ -2204,7 +1965,7 @@ public class Tidy implements Serializable
      */
     public boolean getEscapeCdata()
     {
-        return configuration.escapeCdata;
+        return configuration.isEscapeCdata();
     }
 
     /**
@@ -2212,18 +1973,18 @@ public class Tidy implements Serializable
      * @param repeatedAttributes <code>Configuration.KEEP_FIRST | Configuration.KEEP_LAST</code>
      * @see Configuration#duplicateAttrs
      */
-    public void setRepeatedAttributes(int repeatedAttributes)
+    public void setRepeatedAttributes(final DupAttrModes repeatedAttributes)
     {
-        configuration.duplicateAttrs = repeatedAttributes;
+        configuration.setDuplicateAttrs(repeatedAttributes);
     }
 
     /**
      * <code>repeated-attributes</code>- keep first or last duplicate attribute.
      * @return <code>Configuration.KEEP_FIRST | Configuration.KEEP_LAST</code>
      */
-    public int getRepeatedAttributes()
+    public DupAttrModes getRepeatedAttributes()
     {
-        return configuration.duplicateAttrs;
+        return configuration.getDuplicateAttrs();
     }
 
     /**
@@ -2232,9 +1993,9 @@ public class Tidy implements Serializable
      * @todo <strong>this is NOT supported at this time. </strong>
      * @see Configuration#keepFileTimes
      */
-    public void setKeepFileTimes(boolean keepFileTimes)
+    public void setKeepFileTimes(final boolean keepFileTimes)
     {
-        configuration.keepFileTimes = keepFileTimes;
+        configuration.setKeepFileTimes(keepFileTimes);
     }
 
     /**
@@ -2245,7 +2006,7 @@ public class Tidy implements Serializable
      */
     public boolean getKeepFileTimes()
     {
-        return configuration.keepFileTimes;
+        return configuration.isKeepFileTimes();
     }
 
     /**
@@ -2254,9 +2015,9 @@ public class Tidy implements Serializable
      * @param rawOut avoid mapping values > 127 to entities
      * @see Configuration#rawOut
      */
-    public void setRawOut(boolean rawOut)
+    public void setRawOut(final boolean rawOut)
     {
-        configuration.rawOut = rawOut;
+        configuration.setRawOut(rawOut);
     }
 
     /**
@@ -2266,14 +2027,14 @@ public class Tidy implements Serializable
      */
     public boolean getRawOut()
     {
-        return configuration.rawOut;
+        return configuration.isRawOut();
     }
 
     /**
      * <code>input-encoding</code> the character encoding used for input.
      * @param encoding a valid java encoding name
      */
-    public void setInputEncoding(String encoding)
+    public void setInputEncoding(final String encoding)
     {
         configuration.setInCharEncodingName(encoding);
     }
@@ -2291,7 +2052,7 @@ public class Tidy implements Serializable
      * <code>output-encoding</code> the character encoding used for output.
      * @param encoding a valid java encoding name
      */
-    public void setOutputEncoding(String encoding)
+    public void setOutputEncoding(final String encoding)
     {
         configuration.setOutCharEncodingName(encoding);
     }
@@ -2304,5 +2065,34 @@ public class Tidy implements Serializable
     {
         return configuration.getOutCharEncodingName();
     }
+    
+    /**
+     * @deprecated Use the TriState version.
+     */
+    @Deprecated
+    public void setMergeDivs(final boolean mergeDivs) {
+    	setMergeDivs(TriState.fromBoolean(mergeDivs));
+    }
+    
+    public void setMergeDivs(final TriState mergeDivs) {
+        configuration.setMergeDivs(mergeDivs);
+    }
 
+    public TriState getMergeDivs() {
+        return configuration.getMergeDivs();
+    }
+    
+    /**
+     * @see Option#TidyCompat
+     */
+    public void setTidyCompat(final boolean tidyCompat) {
+        configuration.setTidyCompat(tidyCompat);
+    }
+
+    /**
+     * @see Option#TidyCompat
+     */
+    public boolean isTidyCompat() {
+        return configuration.isTidyCompat();
+    }
 }

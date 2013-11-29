@@ -76,7 +76,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
      * instantiates a new DOMAttrImpl which wraps the given AttVal.
      * @param adaptee wrapped AttVal
      */
-    protected DOMAttrImpl(AttVal adaptee)
+    protected DOMAttrImpl(final AttVal adaptee)
     {
         super(null); // must override all methods of DOMNodeImpl
         this.avAdaptee = adaptee;
@@ -85,6 +85,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
     /**
      * @see org.w3c.dom.Node#getNodeValue()
      */
+    @Override
     public String getNodeValue() throws DOMException
     {
         return getValue();
@@ -93,7 +94,8 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
     /**
      * @see org.w3c.dom.Node#setNodeValue(java.lang.String)
      */
-    public void setNodeValue(String nodeValue) throws DOMException
+    @Override
+    public void setNodeValue(final String nodeValue) throws DOMException
     {
         setValue(nodeValue);
     }
@@ -101,6 +103,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
     /**
      * @see org.w3c.dom.Node#getNodeName()
      */
+    @Override
     public String getNodeName()
     {
         return getName();
@@ -109,6 +112,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
     /**
      * @see org.w3c.dom.Node#getNodeType()
      */
+    @Override
     public short getNodeType()
     {
         return org.w3c.dom.Node.ATTRIBUTE_NODE;
@@ -136,13 +140,13 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
     public String getValue()
     {
         // Thanks to Brett Knights brett@knightsofthenet.com for this fix.
-        return (avAdaptee.value == null) ? avAdaptee.attribute : avAdaptee.value;
+        return avAdaptee.value == null ? avAdaptee.attribute : avAdaptee.value;
     }
 
     /**
      * @see org.w3c.dom.Attr#setValue(java.lang.String)
      */
-    public void setValue(String value)
+    public void setValue(final String value)
     {
         avAdaptee.value = value;
     }
@@ -150,6 +154,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
     /**
      * @see org.w3c.dom.Node#getParentNode()
      */
+    @Override
     public org.w3c.dom.Node getParentNode()
     {
         // Attr.getParentNode() should always return null
@@ -161,6 +166,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
      * @todo DOM level 2 getChildNodes() Not implemented. Returns an empty NodeList.
      * @see org.w3c.dom.Node#getChildNodes()
      */
+    @Override
     public org.w3c.dom.NodeList getChildNodes()
     {
         // Calling getChildNodes on a DOM Attr node does return the children of the Attr, which are the text and
@@ -172,6 +178,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
      * @todo DOM level 2 getFirstChild() Not implemented. Returns null.
      * @see org.w3c.dom.Node#getFirstChild()
      */
+    @Override
     public org.w3c.dom.Node getFirstChild()
     {
         return null;
@@ -181,6 +188,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
      * @todo DOM level 2 getLastChild() Not implemented. Returns null.
      * @see org.w3c.dom.Node#getLastChild()
      */
+    @Override
     public org.w3c.dom.Node getLastChild()
     {
         return null;
@@ -189,6 +197,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
     /**
      * @see org.w3c.dom.Node#getPreviousSibling()
      */
+    @Override
     public org.w3c.dom.Node getPreviousSibling()
     {
         // Attr.getPreviousSibling() should always return null
@@ -198,6 +207,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
     /**
      * @see org.w3c.dom.Node#getNextSibling()
      */
+    @Override
     public org.w3c.dom.Node getNextSibling()
     {
         // Attr.getNextSibling() should always return null
@@ -207,6 +217,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
     /**
      * @see org.w3c.dom.Node#getAttributes()
      */
+    @Override
     public org.w3c.dom.NamedNodeMap getAttributes()
     {
         return null;
@@ -216,6 +227,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
      * @todo DOM level 2 getOwnerDocument() Not implemented. Returns null.
      * @see org.w3c.dom.Node#getOwnerDocument()
      */
+    @Override
     public org.w3c.dom.Document getOwnerDocument()
     {
         return null;
@@ -225,7 +237,8 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
      * Not supported.
      * @see org.w3c.dom.Node#insertBefore(org.w3c.dom.Node, org.w3c.dom.Node)
      */
-    public org.w3c.dom.Node insertBefore(org.w3c.dom.Node newChild, org.w3c.dom.Node refChild) throws DOMException
+    @Override
+    public org.w3c.dom.Node insertBefore(final org.w3c.dom.Node newChild, final org.w3c.dom.Node refChild) throws DOMException
     {
         throw new DOMException(DOMException.NO_MODIFICATION_ALLOWED_ERR, "Not supported");
     }
@@ -234,7 +247,8 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
      * Not supported.
      * @see org.w3c.dom.Node#replaceChild(org.w3c.dom.Node, org.w3c.dom.Node)
      */
-    public org.w3c.dom.Node replaceChild(org.w3c.dom.Node newChild, org.w3c.dom.Node oldChild) throws DOMException
+    @Override
+    public org.w3c.dom.Node replaceChild(final org.w3c.dom.Node newChild, final org.w3c.dom.Node oldChild) throws DOMException
     {
         throw new DOMException(DOMException.NO_MODIFICATION_ALLOWED_ERR, "Not supported");
     }
@@ -243,7 +257,8 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
      * Not supported.
      * @see org.w3c.dom.Node#removeChild(org.w3c.dom.Node)
      */
-    public org.w3c.dom.Node removeChild(org.w3c.dom.Node oldChild) throws DOMException
+    @Override
+    public org.w3c.dom.Node removeChild(final org.w3c.dom.Node oldChild) throws DOMException
     {
         throw new DOMException(DOMException.NO_MODIFICATION_ALLOWED_ERR, "Not supported");
     }
@@ -252,7 +267,8 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
      * Not supported.
      * @see org.w3c.dom.Node#appendChild(org.w3c.dom.Node)
      */
-    public org.w3c.dom.Node appendChild(org.w3c.dom.Node newChild) throws DOMException
+    @Override
+    public org.w3c.dom.Node appendChild(final org.w3c.dom.Node newChild) throws DOMException
     {
         throw new DOMException(DOMException.NO_MODIFICATION_ALLOWED_ERR, "Not supported");
     }
@@ -260,6 +276,7 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
     /**
      * @see org.w3c.dom.Node#hasChildNodes()
      */
+    @Override
     public boolean hasChildNodes()
     {
         return false;
@@ -268,7 +285,8 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
     /**
      * @see org.w3c.dom.Node#cloneNode(boolean)
      */
-    public org.w3c.dom.Node cloneNode(boolean deep)
+    @Override
+	public org.w3c.dom.Node cloneNode(final boolean deep)
     {
         // http://java.sun.com/j2se/1.5.0/docs/api/index.html?org/w3c/dom/Attr.html
         // Cloning an Attr always clones its children, since they represent its value, no matter whether this is a deep
@@ -305,14 +323,15 @@ public class DOMAttrImpl extends DOMNodeImpl implements org.w3c.dom.Attr, Clonea
     /**
      * @see java.lang.Object#clone()
      */
-    protected Object clone()
+    @Override
+	protected Object clone()
     {
         DOMAttrImpl clone;
         try
         {
             clone = (DOMAttrImpl) super.clone();
         }
-        catch (CloneNotSupportedException e)
+        catch (final CloneNotSupportedException e)
         {
             // should never happen
             throw new RuntimeException("Clone not supported");

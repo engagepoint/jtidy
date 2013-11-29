@@ -62,31 +62,28 @@ package org.w3c.tidy;
  */
 public class Attribute
 {
-
+	protected final AttrId id;
+	
     /**
      * attribute name.
      */
-    private String name;
+    private final String name;
 
     /**
      * don't wrap attribute.
      */
+    @Deprecated
     private boolean nowrap;
-
-    /**
-     * unmodifiable attribute?
-     */
-    private boolean literal;
 
     /**
      * html versions for this attribute.
      */
-    private short versions;
+    private final int versions;
 
     /**
      * checker for the attribute.
      */
-    private AttrCheck attrchk;
+    private final AttrCheck attrchk;
 
     /**
      * Instantiates a new Attribute.
@@ -94,27 +91,18 @@ public class Attribute
      * @param htmlVersions versions in which this attribute is supported
      * @param check AttrCheck instance
      */
-    public Attribute(String attributeName, short htmlVersions, AttrCheck check)
-    {
+    public Attribute(final AttrId id, final String attributeName, final int htmlVersions, final AttrCheck check) {
+    	this.id = id;
         this.name = attributeName;
         this.versions = htmlVersions;
         this.attrchk = check;
     }
 
     /**
-     * Is this a literal (unmodifiable) attribute?
-     * @param isLiteral boolean <code>true</code> for a literal attribute
-     */
-    public void setLiteral(boolean isLiteral)
-    {
-        this.literal = isLiteral;
-    }
-
-    /**
      * Don't wrap this attribute?
      * @param isNowrap boolean <code>true</code>= don't wrap
      */
-    public void setNowrap(boolean isNowrap)
+    public void setNowrap(final boolean isNowrap)
     {
         this.nowrap = isNowrap;
     }
@@ -126,15 +114,6 @@ public class Attribute
     public AttrCheck getAttrchk()
     {
         return this.attrchk;
-    }
-
-    /**
-     * Is this a literal (unmodifiable) attribute?
-     * @return <code>true</code> for a literal attribute
-     */
-    public boolean isLiteral()
-    {
-        return this.literal;
     }
 
     /**
@@ -150,6 +129,7 @@ public class Attribute
      * Don't wrap this attribute?
      * @return <code>true</code>= don't wrap
      */
+    @Deprecated
     public boolean isNowrap()
     {
         return this.nowrap;
@@ -160,7 +140,7 @@ public class Attribute
      * @return html versions for this attribute.
      * @see Dict
      */
-    public short getVersions()
+    public int getVersions()
     {
         return this.versions;
     }
