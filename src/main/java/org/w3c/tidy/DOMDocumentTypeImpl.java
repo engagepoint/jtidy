@@ -54,6 +54,8 @@
 
 package org.w3c.tidy;
 
+import org.w3c.tidy.Node.NodeType;
+
 /**
  * DOMDocumentTypeImpl.
  * @author Dave Raggett <a href="mailto:dsr@w3.org">dsr@w3.org </a>
@@ -68,7 +70,7 @@ public class DOMDocumentTypeImpl extends DOMNodeImpl implements org.w3c.dom.Docu
      * Instantiates a new DOM document type.
      * @param adaptee Tidy Node
      */
-    protected DOMDocumentTypeImpl(Node adaptee)
+    protected DOMDocumentTypeImpl(final Node adaptee)
     {
         super(adaptee);
     }
@@ -76,6 +78,7 @@ public class DOMDocumentTypeImpl extends DOMNodeImpl implements org.w3c.dom.Docu
     /**
      * @see org.w3c.dom.Node#getNodeType
      */
+    @Override
     public short getNodeType()
     {
         return org.w3c.dom.Node.DOCUMENT_TYPE_NODE;
@@ -84,6 +87,7 @@ public class DOMDocumentTypeImpl extends DOMNodeImpl implements org.w3c.dom.Docu
     /**
      * @see org.w3c.dom.Node#getNodeName
      */
+    @Override
     public String getNodeName()
     {
         return getName();
@@ -95,7 +99,7 @@ public class DOMDocumentTypeImpl extends DOMNodeImpl implements org.w3c.dom.Docu
     public String getName()
     {
         String value = null;
-        if (adaptee.type == Node.DOCTYPE_TAG)
+        if (adaptee.type == NodeType.DocTypeTag)
         {
 
             if (adaptee.textarray != null && adaptee.start < adaptee.end)

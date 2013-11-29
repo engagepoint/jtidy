@@ -64,7 +64,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
@@ -169,7 +168,7 @@ public class JTidyTask extends Task
     /**
      * Filesets.
      */
-    private List filesets = new ArrayList();
+    private final List<FileSet> filesets = new ArrayList<FileSet>();
 
     /**
      * Destination directory for output.
@@ -214,7 +213,7 @@ public class JTidyTask extends Task
     /**
      * @param destdir The destdir to set.
      */
-    public void setDestdir(File destdir)
+    public void setDestdir(final File destdir)
     {
         this.destdir = destdir;
     }
@@ -222,7 +221,7 @@ public class JTidyTask extends Task
     /**
      * @param destfile The destfile to set.
      */
-    public void setDestfile(File destfile)
+    public void setDestfile(final File destfile)
     {
         this.destfile = destfile;
     }
@@ -230,7 +229,7 @@ public class JTidyTask extends Task
     /**
      * @param srcfile The srcfile to set.
      */
-    public void setSrcfile(File srcfile)
+    public void setSrcfile(final File srcfile)
     {
         this.srcfile = srcfile;
     }
@@ -238,7 +237,7 @@ public class JTidyTask extends Task
     /**
      * @param failonerror The failonerror to set.
      */
-    public void setFailonerror(boolean failonerror)
+    public void setFailonerror(final boolean failonerror)
     {
         this.failonerror = failonerror;
     }
@@ -246,7 +245,7 @@ public class JTidyTask extends Task
     /**
      * @param flatten The flatten to set.
      */
-    public void setFlatten(boolean flatten)
+    public void setFlatten(final boolean flatten)
     {
         this.flatten = flatten;
     }
@@ -254,7 +253,7 @@ public class JTidyTask extends Task
     /**
      * @param properties The properties to set.
      */
-    public void setProperties(File properties)
+    public void setProperties(final File properties)
     {
         this.properties = properties;
     }
@@ -263,7 +262,7 @@ public class JTidyTask extends Task
      * Adds a fileset to be processed Fileset
      * @param fileSet
      */
-    public void addFileset(FileSet fileSet)
+    public void addFileset(final FileSet fileSet)
     {
         filesets.add(fileSet);
     }
@@ -272,7 +271,7 @@ public class JTidyTask extends Task
      * Setter method for any property using the ant type Parameter.
      * @param prop Ant type Parameter
      */
-    public void addConfiguredParameter(Parameter prop)
+    public void addConfiguredParameter(final Parameter prop)
     {
         props.setProperty(prop.getName(), prop.getValue());
     }
@@ -280,7 +279,8 @@ public class JTidyTask extends Task
     /**
      * Initializes the task.
      */
-    public void init()
+    @Override
+	public void init()
     {
         super.init();
 
@@ -330,7 +330,8 @@ public class JTidyTask extends Task
      * Run the task.
      * @exception BuildException The exception raised during task execution.
      */
-    public void execute() throws BuildException
+    @Override
+	public void execute() throws BuildException
     {
         // validate
         validateParameters();
@@ -342,7 +343,7 @@ public class JTidyTask extends Task
             {
                 this.props.load(new FileInputStream(this.properties));
             }
-            catch (IOException e)
+            catch (final IOException e)
             {
                 throw new BuildException("Unable to load properties file " + properties, e);
             }
@@ -403,19 +404,16 @@ public class JTidyTask extends Task
 
         mapper.setTo(this.destdir.getAbsolutePath());
 
-        Iterator iterator = filesets.iterator();
-        while (iterator.hasNext())
-        {
-            FileSet fileSet = (FileSet) iterator.next();
-            DirectoryScanner directoryScanner = fileSet.getDirectoryScanner(getProject());
-            String[] sourceFiles = directoryScanner.getIncludedFiles();
-            File inputdir = directoryScanner.getBasedir();
+        for (final FileSet fileSet : filesets) {
+            final DirectoryScanner directoryScanner = fileSet.getDirectoryScanner(getProject());
+            final String[] sourceFiles = directoryScanner.getIncludedFiles();
+            final File inputdir = directoryScanner.getBasedir();
 
             mapper.setFrom(inputdir.getAbsolutePath());
 
             for (int j = 0; j < sourceFiles.length; j++)
             {
-                String[] mapped = mapper.mapFileName(sourceFiles[j]);
+                final String[] mapped = mapper.mapFileName(sourceFiles[j]);
 
                 processFile(new File(inputdir, sourceFiles[j]), new File(this.destdir, mapped[0]));
             }
@@ -427,7 +425,7 @@ public class JTidyTask extends Task
      * @param inputFile input file
      * @param outputFile output file
      */
-    protected void processFile(File inputFile, File outputFile)
+    protected void processFile(final File inputFile, final File outputFile)
     {
 
         log("Processing " + inputFile.getAbsolutePath(), Project.MSG_DEBUG);
@@ -438,7 +436,7 @@ public class JTidyTask extends Task
         {
             is = new BufferedInputStream(new FileInputStream(inputFile));
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             throw new BuildException("Unable to open file " + inputFile);
         }
@@ -449,7 +447,7 @@ public class JTidyTask extends Task
             outputFile.createNewFile();
             os = new BufferedOutputStream(new FileOutputStream(outputFile));
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             throw new BuildException("Unable to open destination file " + outputFile, e);
         }
@@ -460,7 +458,7 @@ public class JTidyTask extends Task
         {
             is.close();
         }
-        catch (IOException e1)
+        catch (final IOException e1)
         {
             // ignore
         }
@@ -469,7 +467,7 @@ public class JTidyTask extends Task
             os.flush();
             os.close();
         }
-        catch (IOException e1)
+        catch (final IOException e1)
         {
             // ignore
         }

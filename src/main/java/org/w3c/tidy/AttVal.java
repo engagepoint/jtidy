@@ -53,8 +53,9 @@
  */
 package org.w3c.tidy;
 
-import org.w3c.dom.Attr;
+import static org.w3c.tidy.Versions.*;
 
+import org.w3c.dom.Attr;
 
 /**
  * Attribute/Value linked list node.
@@ -65,6 +66,11 @@ import org.w3c.dom.Attr;
  */
 public class AttVal extends Object implements Cloneable
 {
+	/**
+     * Special empty string object to mark strings that (wrongly) end up empty in Tidy (the C library);
+     * normally Tidy uses null for empty strings and checks values based on that
+     */
+    protected static final String EMPTY = new String();
 
     /**
      * next AttVal.
@@ -122,7 +128,7 @@ public class AttVal extends Object implements Cloneable
      * @param attribute attribute name
      * @param value attribute value
      */
-    public AttVal(AttVal next, Attribute dict, int delim, String attribute, String value)
+    public AttVal(final AttVal next, final Attribute dict, final int delim, final String attribute, final String value)
     {
         this.next = next;
         this.dict = dict;
@@ -141,7 +147,7 @@ public class AttVal extends Object implements Cloneable
      * @param attribute attribute name
      * @param value attribute value
      */
-    public AttVal(AttVal next, Attribute dict, Node asp, Node php, int delim, String attribute, String value)
+    public AttVal(final AttVal next, final Attribute dict, final Node asp, final Node php, final int delim, final String attribute, final String value)
     {
         this.next = next;
         this.dict = dict;
@@ -155,14 +161,15 @@ public class AttVal extends Object implements Cloneable
     /**
      * @see java.lang.Object#clone()
      */
-    protected Object clone()
+    @Override
+	protected Object clone()
     {
         AttVal av = null;
         try
         {
             av = (AttVal) super.clone();
         }
-        catch (CloneNotSupportedException e)
+        catch (final CloneNotSupportedException e)
         {
             // should never happen
         }
@@ -189,7 +196,7 @@ public class AttVal extends Object implements Cloneable
      */
     public boolean isBoolAttribute()
     {
-        Attribute attr = this.dict;
+        final Attribute attr = this.dict;
         if (attr != null)
         {
             if (attr.getAttrchk() == AttrCheckImpl.BOOL)
@@ -200,6 +207,38 @@ public class AttVal extends Object implements Cloneable
 
         return false;
     }
+    
+    boolean isEvent() {
+        final AttrId atid = dict.id;
+
+        return atid == AttrId.OnAFTERUPDATE     ||
+                atid == AttrId.OnBEFOREUNLOAD    ||
+                atid == AttrId.OnBEFOREUPDATE    ||
+                atid == AttrId.OnBLUR            ||
+                atid == AttrId.OnCHANGE          ||
+                atid == AttrId.OnCLICK           ||
+                atid == AttrId.OnDATAAVAILABLE   ||
+                atid == AttrId.OnDATASETCHANGED  ||
+                atid == AttrId.OnDATASETCOMPLETE ||
+                atid == AttrId.OnDBLCLICK        ||
+                atid == AttrId.OnERRORUPDATE     ||
+                atid == AttrId.OnFOCUS           ||
+                atid == AttrId.OnKEYDOWN         ||
+                atid == AttrId.OnKEYPRESS        ||
+                atid == AttrId.OnKEYUP           ||
+                atid == AttrId.OnLOAD            ||
+                atid == AttrId.OnMOUSEDOWN       ||
+                atid == AttrId.OnMOUSEMOVE       ||
+                atid == AttrId.OnMOUSEOUT        ||
+                atid == AttrId.OnMOUSEOVER       ||
+                atid == AttrId.OnMOUSEUP         ||
+                atid == AttrId.OnRESET           ||
+                atid == AttrId.OnROWENTER        ||
+                atid == AttrId.OnROWEXIT         ||
+                atid == AttrId.OnSELECT          ||
+                atid == AttrId.OnSUBMIT          ||
+                atid == AttrId.OnUNLOAD;
+    }
 
     /**
      * Check the attribute value for uppercase letters (only if the value should be lowercase, required for literal
@@ -207,23 +246,23 @@ public class AttVal extends Object implements Cloneable
      * @param lexer Lexer
      * @param node Node which contains this attribute
      */
-    void checkLowerCaseAttrValue(Lexer lexer, Node node)
+    void checkLowerCaseAttrValue(final Lexer lexer, final Node node)
     {
         if (this.value == null)
         {
             return;
         }
 
-        String lowercase = this.value.toLowerCase();
+        final String lowercase = this.value.toLowerCase();
 
         if (!this.value.equals(lowercase))
         {
             if (lexer.isvoyager)
             {
-                lexer.report.attrError(lexer, node, this, Report.ATTR_VALUE_NOT_LCASE);
+                lexer.report.attrError(lexer, node, this, ErrorCode.ATTR_VALUE_NOT_LCASE);
             }
 
-            if (lexer.isvoyager || lexer.configuration.lowerLiterals)
+            if (lexer.isvoyager || lexer.configuration.isLowerLiterals())
             {
                 this.value = lowercase;
             }
@@ -236,48 +275,32 @@ public class AttVal extends Object implements Cloneable
      * @param node node which contains this attribute
      * @return Attribute
      */
-    public Attribute checkAttribute(Lexer lexer, Node node)
-    {
-        TagTable tt = lexer.configuration.tt;
-
-        Attribute attr = this.dict;
+    public Attribute checkAttribute(final Lexer lexer, final Node node) {
+        final Attribute attr = this.dict;
 
         // ignore unknown attributes for proprietary elements
-        if (attr != null)
-        {
-
+        if (attr != null) {
             // if attribute looks like <foo/> check XML is ok
-            if (TidyUtils.toBoolean(attr.getVersions() & Dict.VERS_XML))
-            {
-                if (!(lexer.configuration.xmlTags || lexer.configuration.xmlOut))
-                {
-                    lexer.report.attrError(lexer, node, this, Report.XML_ATTRIBUTE_VALUE);
+            if (TidyUtils.toBoolean(attr.getVersions() & VERS_XML)) {
+            	lexer.isvoyager = true;
+                if (!lexer.configuration.isHtmlOut()) {
+                	lexer.configuration.setXHTML(true);
+                	lexer.configuration.setXmlOut(true);
                 }
             }
-            // title first appeared in HTML 4.0 except for a/link
-            else if (attr != AttributeTable.attrTitle || !(node.tag == tt.tagA || node.tag == tt.tagLink))
-            {
-                lexer.constrainVersion(attr.getVersions());
-            }
+            lexer.constrainVersion(node.getAttributeVersions(this));
 
-            if (attr.getAttrchk() != null)
-            {
+            if (attr.getAttrchk() != null) {
                 attr.getAttrchk().check(lexer, node, this);
             }
-            else if (TidyUtils.toBoolean(this.dict.getVersions() & Dict.VERS_PROPRIETARY))
-            {
-                lexer.report.attrError(lexer, node, this, Report.PROPRIETARY_ATTRIBUTE);
+        }
+        
+        if (node.attributeIsProprietary(this)) {
+            lexer.report.attrError(lexer, node, this, ErrorCode.PROPRIETARY_ATTRIBUTE);
+            if (lexer.configuration.isDropProprietaryAttributes()) {
+            	node.removeAttribute(this);
             }
-
         }
-        else if (!lexer.configuration.xmlTags
-            && !(node.tag == null)
-            && this.asp == null
-            && !(node.tag != null && (TidyUtils.toBoolean(node.tag.versions & Dict.VERS_PROPRIETARY))))
-        {
-            lexer.report.attrError(lexer, node, this, Report.UNKNOWN_ATTRIBUTE);
-        }
-
         return attr;
     }
 
@@ -307,7 +330,7 @@ public class AttVal extends Object implements Cloneable
      * Setter for <code>asp</code>.
      * @param asp The asp to set.
      */
-    public void setAsp(Node asp)
+    public void setAsp(final Node asp)
     {
         this.asp = asp;
     }
@@ -325,7 +348,7 @@ public class AttVal extends Object implements Cloneable
      * Setter for <code>attribute</code>.
      * @param attribute The attribute to set.
      */
-    public void setAttribute(String attribute)
+    public void setAttribute(final String attribute)
     {
         this.attribute = attribute;
     }
@@ -343,7 +366,7 @@ public class AttVal extends Object implements Cloneable
      * Setter for <code>delim</code>.
      * @param delim The delim to set.
      */
-    public void setDelim(int delim)
+    public void setDelim(final int delim)
     {
         this.delim = delim;
     }
@@ -361,7 +384,7 @@ public class AttVal extends Object implements Cloneable
      * Setter for <code>dict</code>.
      * @param dict The dict to set.
      */
-    public void setDict(Attribute dict)
+    public void setDict(final Attribute dict)
     {
         this.dict = dict;
     }
@@ -379,7 +402,7 @@ public class AttVal extends Object implements Cloneable
      * Setter for <code>next</code>.
      * @param next The next to set.
      */
-    public void setNext(AttVal next)
+    public void setNext(final AttVal next)
     {
         this.next = next;
     }
@@ -397,7 +420,7 @@ public class AttVal extends Object implements Cloneable
      * Setter for <code>php</code>.
      * @param php The php to set.
      */
-    public void setPhp(Node php)
+    public void setPhp(final Node php)
     {
         this.php = php;
     }
@@ -415,9 +438,54 @@ public class AttVal extends Object implements Cloneable
      * Setter for <code>value</code>.
      * @param value The value to set.
      */
-    public void setValue(String value)
+    public void setValue(final String value)
     {
         this.value = value;
     }
+    
+    public boolean hasId(final AttrId id) {
+    	return dict != null && dict.id == id;
+    }
+    
+    public boolean hasValue() {
+    	return value != null && value.length() > 0 || value == EMPTY;
+    }
+    
+    public boolean valueIs(final String val) {
+    	return hasValue() && value.equalsIgnoreCase(val);
+    }
+    
+    public boolean contains(final String val) {
+    	return hasValue() && value.contains(val);
+    }
+    
+    public boolean valueIsAmong(final String list[]) {
+    	return TidyUtils.isInValuesIgnoreCase(list, value);
+    }
+    
+    public boolean is(final AttrId id) {
+    	return dict != null && dict.id == id;
+    }
+    
+    protected AttrId getId() {
+    	return dict != null ? dict.id : AttrId.UNKNOWN;
+    }
+    
+    protected static AttVal addAttrToList(final AttVal list, final AttVal av) {
+    	if (list == null) {
+    	    return av;
+    	} else {
+    	    AttVal here = list;
+    	    while (here.next != null) {
+    	    	here = here.next;
+    	    }
+    	    here.next = av;
+    	    return list;
+    	}
+    }
 
+	@Override
+	public String toString() {
+		return attribute + "=" + value;
+	}
 }
